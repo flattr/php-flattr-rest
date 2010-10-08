@@ -163,17 +163,24 @@ class Flattr_Rest
 		}
 		return $categories;
 	}
-	public function getUserInfo($userid = null)
+	public function getUserInfo($user = null)
 	{
 		$result = null;
 
-		if ( ! $userid )
+		if ( ! $user )
 		{
 			$result = $this->get($this->actionUrl('/user/me'));
 		}
 		else
 		{
-			$result = $this->get($this->actionUrl('/user/get/id/' . $userid));
+			if ( is_numeric($user) )
+			{
+				$result = $this->get($this->actionUrl('/user/get/id/' . $user));
+			}
+			else
+			{
+				$result = $this->get($this->actionUrl('/user/get/name/' . $user));
+			}
 		}
 
 		$dom = new DOMDocument();
