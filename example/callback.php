@@ -5,12 +5,6 @@ session_start();
 // Our configuration, edit it to set your API credentials
 require_once('config.php');
 
-// Your application key
-define('APP_KEY', 'Jqwjeijas9dfu22j9dwfkdwQWD9');
- 
-// Your application secret
-define('APP_SECRET', 'kqweias9dqwASKD912kasdasdjqw');
- 
 // OAuth library
 require_once('oauth.php');
 
