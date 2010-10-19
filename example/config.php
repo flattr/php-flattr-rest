@@ -6,3 +6,12 @@ define('APP_KEY', 'Jqwjeijas9dfu22j9dwfkdwQWD9');
 define('APP_SECRET', 'kqweias9dqwASKD912kasdasdjqw');
 // Your callback url
 define('CALLBACK_URL', 'http://'.$_SERVER['SERVER_NAME'].dirname($_SERVER['SCRIPT_NAME']).'/callback.php');
+
+// use utf-8!
+?>
+<!DOCTYPE html !>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" value="text/html; charset=utf-8"/>
+    </head>
+    <body>
