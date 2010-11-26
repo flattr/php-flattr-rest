@@ -28,28 +28,32 @@ class Flattr_Rest
 	{
 		return $this->baseUrl . '/oauth/access_token';
 	}
-	private function authenticateUrl()
+	
+	private function authorizeUrl()
 	{
 		return $this->baseUrl . '/oauth/authenticate';
 	}
-	private function authorizeUrl()
+
+	private function connectUrl()
 	{
-		return $this->baseUrl . '/oauth/authorize';
+		return $this->baseUrl . '/oauth/connect';
 	}
+
 	private function requestTokenUrl()
 	{
 		return $this->baseUrl . '/oauth/request_token';
 	}
 
 	private function get($url, $parameters = array())
-        {
-                $response = $this->oAuthRequest($url, 'GET', $parameters);
-                return $response;
-        }
+    {
+        $response = $this->oAuthRequest($url, 'GET', $parameters);
+        return $response;
+    }
+    
 	private function post($url, $parameters = array())
-        {
-                $response = $this->oAuthRequest($url, 'POST', $parameters);
-                return $response;
+    {
+        $response = $this->oAuthRequest($url, 'POST', $parameters);
+        return $response;
 	}
 
 	private function parseThingXml($xml)
@@ -91,10 +95,10 @@ class Flattr_Rest
 		}
 		else
 		{
-			# echo "Error " . $this->http_code . ', ' . $this->http_info . "<br />";
 			return false;
 		}
 	}
+	
 	public function clickThing($id)
 	{
 		$result = $this->get($this->actionUrl('/thing/click/id/' . $id));
@@ -145,6 +149,7 @@ class Flattr_Rest
 		}
 		return $languages;
 	}
+	
 	public function getCategories()
 	{
 		$result = $this->get($this->actionUrl('/feed/categories'));
@@ -163,11 +168,12 @@ class Flattr_Rest
 		}
 		return $categories;
 	}
+	
 	public function getUserInfo($user = null)
 	{
 		$result = null;
 
-		if ( ! $user )
+		if ( !$user )
 		{
 			$result = $this->get($this->actionUrl('/user/me'));
 		}
@@ -222,14 +228,19 @@ class Flattr_Rest
 
 	public function getAuthorizeUrl($token, $access = 'read')
 	{
-		return $this->authenticateUrl() . '?oauth_token=' . $token['oauth_token'] . '&access_scope=' . $access;
+		return $this->authorizeUrl() . '?oauth_token=' . $token['oauth_token'] . '&access_scope=' . $access;
 	}
 
-	function __construct($consumer_key, $consumer_secret, $oauth_token = null, $oauth_token_secret = null)
+	public function getConnectUrl($token, $access = 'read')
+	{
+		return $this->connectUrl() . '?oauth_token=' . $token['oauth_token'] . '&access_scope=' . $access;
+	}
+
+	public function __construct($consumer_key, $consumer_secret, $oauth_token = null, $oauth_token_secret = null)
 	{
 		$this->signature_method = new OAuthSignatureMethod_HMAC_SHA1();
 		$this->consumer = new OAuthConsumer($consumer_key, $consumer_secret);
-		if ( ! empty($oauth_token) && ! empty($oauth_token_secret) )
+		if ( !empty($oauth_token) && ! empty($oauth_token_secret) )
 		{
 			$this->token = new OAuthConsumer($oauth_token, $oauth_token_secret);
 		}
@@ -247,48 +258,55 @@ class Flattr_Rest
 		$headers[] = 'Expect:';
 
 		curl_setopt($ci, CURLOPT_USERAGENT, 'Flattrbot/0.1');
-    		curl_setopt($ci, CURLOPT_CONNECTTIMEOUT, 10);
-    		curl_setopt($ci, CURLOPT_TIMEOUT, 10);
-    		curl_setopt($ci, CURLOPT_RETURNTRANSFER, true);
-    		curl_setopt($ci, CURLOPT_HTTPHEADER, $headers);
-    		curl_setopt($ci, CURLOPT_SSL_VERIFYPEER, false);
-    		curl_setopt($ci, CURLOPT_HEADERFUNCTION, array($this, 'getHeader'));
-    		curl_setopt($ci, CURLOPT_HEADER, FALSE);
+		curl_setopt($ci, CURLOPT_CONNECTTIMEOUT, 10);
+		curl_setopt($ci, CURLOPT_TIMEOUT, 10);
+		curl_setopt($ci, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ci, CURLOPT_HTTPHEADER, $headers);
+		curl_setopt($ci, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($ci, CURLOPT_HEADERFUNCTION, array($this, 'getHeader'));
+		curl_setopt($ci, CURLOPT_HEADER, FALSE);
 
-    		switch ($method) {
-      			case 'POST':
-        			curl_setopt($ci, CURLOPT_POST, TRUE);
-        			if (!empty($postfields)) {
-          				curl_setopt($ci, CURLOPT_POSTFIELDS, $postfields);
-        			}
-        			break;
-      			case 'DELETE':
-        			curl_setopt($ci, CURLOPT_CUSTOMREQUEST, 'DELETE');
-        			if (!empty($postfields)) {
-          				$url = "{$url}?{$postfields}";
-        			}
-    		}
+		switch ($method)
+		{
+  			case 'POST':
+    			curl_setopt($ci, CURLOPT_POST, TRUE);
+    			if (!empty($postfields))
+    			{
+      				curl_setopt($ci, CURLOPT_POSTFIELDS, $postfields);
+    			}
+    			break;
 
-    		curl_setopt($ci, CURLOPT_URL, $url);
-    		$response = curl_exec($ci);
-    		$this->http_code = curl_getinfo($ci, CURLINFO_HTTP_CODE);
-    		$this->http_info = array_merge($this->http_info, curl_getinfo($ci));
-    		$this->url = $url;
-    		curl_close ($ci);
+  			case 'DELETE':
+    			curl_setopt($ci, CURLOPT_CUSTOMREQUEST, 'DELETE');
+    			if (!empty($postfields))
+    			{
+      				$url = "{$url}?{$postfields}";
+    			}
+		}
 
-    		return $response;
+		curl_setopt($ci, CURLOPT_URL, $url);
+		$response = curl_exec($ci);
+		$this->http_code = curl_getinfo($ci, CURLINFO_HTTP_CODE);
+		$this->http_info = array_merge($this->http_info, curl_getinfo($ci));
+		$this->url = $url;
+		curl_close ($ci);
+
+		return $response;
 	}
+	
 	private function getHeader($ch, $header)
 	{
 		$i = strpos($header, ':');
 		if (!empty($i))
 		{
 			$key = str_replace('-', '_', strtolower(substr($header, 0, $i)));
-      			$value = trim(substr($header, $i + 2));
-      			$this->http_header[$key] = $value;
-    		}
-    		return strlen($header);
+  			$value = trim(substr($header, $i + 2));
+  			$this->http_header[$key] = $value;
+    	}
+    	
+    	return strlen($header);
 	}
+	
 	public function getAccessToken($verifier)
 	{
 		$parameters = array('oauth_verifier' => $verifier);
@@ -301,11 +319,12 @@ class Flattr_Rest
 			return $token;
 		}
 	}
+	
 	public function getRequestToken($callback = null)
 	{
 		$parameters = array();
 
-		if ( ! empty($callback) )
+		if ( !empty($callback) )
 		{
 			$parameters['oauth_callback'] = $callback;
 		}
@@ -330,26 +349,32 @@ class Flattr_Rest
 			}
 		}
 	}
-	private function oAuthRequest($url, $method, $parameters, $headers = array()) {
-    		if (strrpos($url, 'https://') !== 0 && strrpos($url, 'http://') !== 0) {
-      			$url = "{$this->host}{$url}.{$this->format}";
-    		}
-    		$request = OAuthRequest::from_consumer_and_token($this->consumer, $this->token, $method, $url, $parameters);
-    		$request->sign_request($this->signature_method, $this->consumer, $this->token);
+	
+	private function oAuthRequest($url, $method, $parameters, $headers = array())
+	{
+    	if (strrpos($url, 'https://') !== 0 && strrpos($url, 'http://') !== 0)
+    	{
+      		$url = "{$this->host}{$url}.{$this->format}";
+    	}
+    	
+    	$request = OAuthRequest::from_consumer_and_token($this->consumer, $this->token, $method, $url, $parameters);
+    	$request->sign_request($this->signature_method, $this->consumer, $this->token);
 		$headers['Authorization'] = $request->to_header();
-    		switch ($method) {
-    			case 'GET':
-      				return $this->http($request->to_url(), 'GET', null, $headers);
-    			default:
-      				return $this->http($request->get_normalized_http_url(), $method, $request->to_postdata(), $headers);
-    		}
+
+		switch ($method)
+		{
+			case 'GET':
+  				return $this->http($request->to_url(), 'GET', null, $headers);
+			default:
+  				return $this->http($request->get_normalized_http_url(), $method, $request->to_postdata(), $headers);
+    	}
   	}
+  	
 	public function submitThing($url, $title, $category, $description, $tags, $language, $hidden = false, $temporary = false)
 	{
 		$dom = new DOMDocument('1.0', 'utf-8');
+		
 		$doc = $dom->appendChild($dom->createElement('thing'));
-
-
 		$doc->appendChild(self::xmlAddElement($dom, 'url', $url));
 		$doc->appendChild($this->xmlAddElement($dom, 'title', $title));
 		$doc->appendChild($this->xmlAddElement($dom, 'category', $category));
@@ -357,30 +382,36 @@ class Flattr_Rest
 		$doc->appendChild($this->xmlAddElement($dom, 'language', $language));
 		$doc->appendChild($this->xmlAddElement($dom, 'hidden', $hidden));
 		$doc->appendChild($this->xmlAddElement($dom, 'temporary', $temporary));
+		
 		$tagsXml = $doc->appendChild($dom->createElement('tags'));
 
 		foreach ( explode(',', $tags) as $tag )
 		{
 			$tagsXml->appendChild($this->xmlAddElement($dom, 'tag', trim($tag)));
 		}
+		
 		$result = $this->post($this->actionUrl('/thing/register'), array('data' => $dom->saveXml()));
 		$dom = new DOMDocument();
 		$dom->loadXml($result);
 		$thingXml = $dom->getElementsByTagName('thing');
 		$thing = $this->parseThingXml($thingXml->item(0));
+		
 		return $thing;
 	}
+	
 	private function xmlAddElement($dom, $name, $value)
 	{
-               $element = $dom->createElement($name);
-               $element->appendChild($dom->createTextNode($value));
-               return $element;
+       $element = $dom->createElement($name);
+       $element->appendChild($dom->createTextNode($value));
+       
+       return $element;
 	}
-        private function xmlAddCdataElement($dom, $name, $value)
-        {
-                $element = $dom->createElement($name);
-                $cdata = $element->ownerDocument->createCDATASection($value);
-                $element->appendChild($cdata);
-                return $element;
-        }
+			
+    private function xmlAddCdataElement($dom, $name, $value)
+    {
+        $element = $dom->createElement($name);
+        $cdata = $element->ownerDocument->createCDATASection($value);
+        $element->appendChild($cdata);
+        return $element;
+    }
 }
