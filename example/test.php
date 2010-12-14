@@ -40,10 +40,25 @@ $categories = $flattr->getCategories();
 // Get available languages
 $languages = $flattr->getLanguages();
 
+// get clicks
+$clicks = $flattr->getClicks('201010');
 ?>
+
 <p>
 	You are authenticated as <?php echo $me['username'] ?>.
 </p>
+
+<p>
+	You've made the following clicks <br />
+	<?php 
+		foreach( $clicks as $key => $click )
+		{
+			printf( '%s <a href="%s">%s</a><br />', date('Y-m-d', $click['click_time']), $click['thing']['url'], $click['thing']['title'] );
+		}
+	?>
+</p>
+
+
 <p>
 	You have <?php echo count($myThings) ?> things.
 </p>

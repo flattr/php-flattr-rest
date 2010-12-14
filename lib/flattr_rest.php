@@ -1,5 +1,6 @@
 <?php
 
+require_once( 'flattr_xml.php' );
 class Flattr_Rest
 {
 	public $http_header;
@@ -10,9 +11,9 @@ class Flattr_Rest
 	public $consumer;
 	public $token;
 
-	private $apiVersion = '0.0.1';
+	private $apiVersion = '0.0.5';
 	private $error;
-	private $baseUrl = 'http://api.flattr.com';
+	private $baseUrl = 'http://api.flattr.local';
 
 	public function error()
 	{
@@ -85,6 +86,7 @@ class Flattr_Rest
 	public function getThing($id)
 	{
 		$result = $this->get($this->actionUrl('/thing/get/id/' . $id));
+
 		if ( $this->http_code == 200 )
 		{
 			$dom = new DOMDocument();
@@ -134,20 +136,12 @@ class Flattr_Rest
 	public function getLanguages()
 	{
 		$result = $this->get($this->actionUrl('/feed/languages'));
+
 		$dom = new DOMDocument();
 		$dom->loadXml($result);
 		$langXml = $dom->getElementsByTagName('language');
-		$languages = array();
-		$langdata = array();
-		foreach ($langXml as $lang)
-		{
-			foreach ($lang->childNodes as $i)
-			{
-				$langdata[$i->nodeName] = $i->nodeValue;
-			}
-			$languages[] = $langdata;
-		}
-		return $languages;
+
+		return Flattr_Xml::toArray( $langXml );
 	}
 	
 	public function getCategories()
@@ -167,6 +161,17 @@ class Flattr_Rest
 			$categories[] = $catdata;
 		}
 		return $categories;
+	}
+
+	public function getClicks( $period )
+	{
+		$response = $this->get( $this->actionUrl( "/user/clicks/period/{$period}" ) );
+
+		$dom = new DOMDocument();
+		$dom->loadXml( $response );
+		$clicksXml = $dom->getElementsByTagName( 'click' );
+
+		return Flattr_Xml::toArray( $clicksXml );
 	}
 	
 	public function getUserInfo($user = null)
@@ -320,6 +325,12 @@ class Flattr_Rest
 		}
 	}
 	
+	/**
+	 * Gets a request token from the API server and returns an oauth token.
+	 *
+	 * @param string $callback a callback url (fully qualified)
+	 * @return array oauth response parameters as array
+	 */
 	public function getRequestToken($callback = null)
 	{
 		$parameters = array();
@@ -329,25 +340,19 @@ class Flattr_Rest
 			$parameters['oauth_callback'] = $callback;
 		}
 
-		$request = $this->oAuthRequest($this->requestTokenUrl(), 'GET', $parameters);
-		$token = OAuthUtil::parse_parameters($request);
-		if ( isset($token['oauth_token']) && isset($token['oauth_token_secret']) )
+		$response = $this->oAuthRequest($this->requestTokenUrl(), 'GET', $parameters);
+		error_log($response);
+		$responseParameters = OAuthUtil::parse_parameters($response);
+		if ( isset($responseParameters['oauth_token']) && isset($responseParameters['oauth_token_secret']) )
 		{
-			$this->token = new OAuthConsumer($token['oauth_token'], $token['oauth_token_secret']);
-			return $token;
+			$this->token = new OAuthConsumer($responseParameters['oauth_token'], $responseParameters['oauth_token_secret']);
 		}
 		else
 		{
-			$dom = new DOMDocument();
-			if ( $dom->loadXml($request) )
-			{
-				$error = $dom->getElementsByTagName('error');
-				if ( $error->length > 0 )
-				{
-					$this->error = $error->item(0)->nodeValue;
-				}
-			}
+			$this->error = $responseParameters['oauth_problem'];
 		}
+
+		return $responseParameters;
 	}
 	
 	private function oAuthRequest($url, $method, $parameters, $headers = array())
