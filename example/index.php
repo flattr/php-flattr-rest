@@ -5,9 +5,6 @@ session_start();
 // Our configuration, edit it to set your API credentials
 require_once('config.php');
 
-// OAuth library
-require_once('oauth.php');
-
 // Flattr REST library
 require_once('flattr_rest.php');
 
@@ -30,4 +27,7 @@ $_SESSION['flattr_request_token'] = $token;
 // After auth we will be redirected to callback.php
 ?>
  
-<a href="<?php echo $flattr->getAuthorizeUrl($token, 'read,readextended,click,publish') ?>">Connect with Flattr</a>
+		<a href="<?php echo $flattr->getAuthorizeUrl($token, 'read,readextended,click,publish') ?>">Connect with Flattr</a>
+
+	</body>
+</html>

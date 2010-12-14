@@ -1,4 +1,7 @@
 <?php
+
+define( 'LOCAL_DEV_ENV', true );
+
 set_include_path(get_include_path() . PATH_SEPARATOR . '../lib/');
 
 // Your application key

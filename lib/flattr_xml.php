@@ -2,6 +2,28 @@
 
 class Flattr_Xml
 {
+    
+	public static function addElement(DOMNode $node, $name, $value)
+	{
+	    if ( is_bool( $value ) )
+	    {
+	        $value = (int)$value;
+	    }
+	    
+        if ( $value instanceOf DOMNode )
+        {
+            throw new Exception('Construction blocks your path!');
+        }
+        else if ( is_numeric( $value ) )
+        {
+            $node->appendChild( new DOMElement($name, $value) );
+        }
+        else
+        {
+            $elm = $node->appendChild( new DOMElement($name) );
+            $elm->appendChild( $node->ownerDocument->createCDATASection($value) );
+        }
+	}
 	
 	/**
 	 * Checks if node has any children other than just text

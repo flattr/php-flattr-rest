@@ -1,6 +1,8 @@
 <?php
 
+require_once('oauth.php');
 require_once( 'flattr_xml.php' );
+
 class Flattr_Rest
 {
 	public $http_header;
@@ -13,94 +15,29 @@ class Flattr_Rest
 
 	private $apiVersion = '0.0.5';
 	private $error;
-	private $baseUrl = 'http://api.flattr.local';
+	private $baseUrl = 'http://api.flattr.com';
 
-	public function error()
+	public function __construct($consumer_key, $consumer_secret, $oauth_token = null, $oauth_token_secret = null)
 	{
-		return $this->error;
-	}
+	    if ( defined('LOCAL_DEV_ENV') )
+	    {
+	        $this->baseUrl = 'http://api.flattr.local';
+	    }
 
-	private function actionUrl($uri)
-	{
-		return $this->baseUrl . '/rest/' . $this->apiVersion . $uri;
-	}
-
-	private function accessTokenUrl()
-	{
-		return $this->baseUrl . '/oauth/access_token';
-	}
-	
-	private function authorizeUrl()
-	{
-		return $this->baseUrl . '/oauth/authenticate';
-	}
-
-	private function connectUrl()
-	{
-		return $this->baseUrl . '/oauth/connect';
-	}
-
-	private function requestTokenUrl()
-	{
-		return $this->baseUrl . '/oauth/request_token';
-	}
-
-	private function get($url, $parameters = array())
-    {
-        $response = $this->oAuthRequest($url, 'GET', $parameters);
-        return $response;
-    }
-    
-	private function post($url, $parameters = array())
-    {
-        $response = $this->oAuthRequest($url, 'POST', $parameters);
-        return $response;
-	}
-
-	private function parseThingXml($xml)
-	{
-		$thingdata = array();
-
-		foreach ($xml->childNodes as $i)
+		$this->signature_method = new OAuthSignatureMethod_HMAC_SHA1();
+		$this->consumer = new OAuthConsumer($consumer_key, $consumer_secret);
+		if ( !empty($oauth_token) && ! empty($oauth_token_secret) )
 		{
-			if ( $i->nodeName == 'user' && $i->childNodes->length > 0 )
-			{
-				$thingdata[$i->nodeName] = $this->loadArrayFromXml($i);
-			}
-			else if ( $i->nodeName == 'category' && $i->childNodes->length > 0 )
-			{
-				$thingdata[$i->nodeName] = $this->loadArrayFromXml($i);
-			}
-			else if ( $i->nodeName == 'tags' && $i->childNodes->length > 0 )
-			{
-				$thingdata[$i->nodeName] = $this->loadArrayFromXml($i, 'csv');
-			}
-			else
-			{
-				$thingdata[$i->nodeName] = trim($i->nodeValue);
-			}
-		}
-		return $thingdata;
-	}
-
-	public function getThing($id)
-	{
-		$result = $this->get($this->actionUrl('/thing/get/id/' . $id));
-
-		if ( $this->http_code == 200 )
-		{
-			$dom = new DOMDocument();
-			$dom->loadXml($result);
-			$thingXml = $dom->getElementsByTagName('thing');
-			$thing = $this->parseThingXml($thingXml);
-			return $thing;
+			$this->token = new OAuthConsumer($oauth_token, $oauth_token_secret);
 		}
 		else
 		{
-			return false;
+			$this->token = null;
 		}
 	}
-	
+
+	// Flattr API methods
+
 	public function clickThing($id)
 	{
 		$result = $this->get($this->actionUrl('/thing/click/id/' . $id));
@@ -110,59 +47,37 @@ class Flattr_Rest
 		}
 		else
 		{
-			echo "Click error " . $this->http_code . ', ' . $this->http_info . "<br />";
+			$this->error = "Click error " . $this->http_code . ', ' . $this->http_info . "<br />";
 			return false;
 		}
 	}
 
-	public function getThingList($userid = null)
+	public function error()
 	{
-		$result = $this->get($this->actionUrl('/thing/listbyuser/id/' . $userid));
-		$dom = new DOMDocument();
-		$dom->loadXml($result);
-		$thingXml = $dom->getElementsByTagName('thing');
-		$things = array();
-		foreach ($thingXml as $thing)
-		{
-			$thingdata = $this->parseThingXml($thing);
-			if ( is_array($thingdata) )
-			{
-				$things[] = $thingdata;
-			}
-		}
-		return $things;
+		return $this->error;
 	}
 
-	public function getLanguages()
-	{
-		$result = $this->get($this->actionUrl('/feed/languages'));
-
-		$dom = new DOMDocument();
-		$dom->loadXml($result);
-		$langXml = $dom->getElementsByTagName('language');
-
-		return Flattr_Xml::toArray( $langXml );
-	}
-	
+	/**
+	 * Returns an array of Flattr's categories...
+	 * 
+	 * @return array
+	 */
 	public function getCategories()
 	{
 		$result = $this->get($this->actionUrl('/feed/categories'));
+		
 		$dom = new DOMDocument();
 		$dom->loadXml($result);
 		$catXml = $dom->getElementsByTagName('category');
-		$categories = array();
-		$catdata = array();
-		foreach ($catXml as $cat)
-		{
-			foreach ($cat->childNodes as $i)
-			{
-				$catdata[$i->nodeName] = $i->nodeValue;
-			}
-			$categories[] = $catdata;
-		}
-		return $categories;
+		
+		return Flattr_Xml::toArray( $catXml );
 	}
 
+	/**
+	 * Returns an array of clicks made by the authenticated user during the given period. 
+	 *
+	 * @param string $period in the format 'YYYYMM'
+	 */
 	public function getClicks( $period )
 	{
 		$response = $this->get( $this->actionUrl( "/user/clicks/period/{$period}" ) );
@@ -173,7 +88,72 @@ class Flattr_Rest
 
 		return Flattr_Xml::toArray( $clicksXml );
 	}
-	
+
+	/**
+	 * Returns a thing as an array.
+	 * If a thing could not be found false is returned
+	 * 
+	 * @param string $id
+	 * @return array|false
+	 */
+	public function getThing( $id )
+	{
+		$result = $this->get($this->actionUrl('/thing/get/id/' . $id));
+		echo $result;
+		if ( $this->http_code == 200 )
+		{
+			$dom = new DOMDocument();
+			$dom->loadXml($result);
+			$thingXml = $dom->getElementsByTagName('thing');
+			if ( ( $thingXml = $thingXml->item(0) ) !== null )
+			{
+			    return Flattr_Xml::toArray( $thingXml );
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Returns an array of things owned by specified user
+	 * if no userid is given the current authenticated user is used.
+	 *
+	 * @param int $userId
+	 */
+	public function getThingList($userId = null)
+	{
+		$result = $this->get($this->actionUrl('/thing/listbyuser/id/' . $userId));
+		
+		$dom = new DOMDocument();
+		$dom->loadXml($result);
+		$thingXml = $dom->getElementsByTagName('thing');
+		
+		return Flattr_Xml::toArray( $thingXml );
+	}
+
+	/**
+	 * Returns an array of Flattr's langauges
+	 * 
+	 * @return array
+	 */
+	public function getLanguages()
+	{
+		$result = $this->get($this->actionUrl('/feed/languages'));
+
+		$dom = new DOMDocument();
+		$dom->loadXml($result);
+		$langXml = $dom->getElementsByTagName('language');
+
+		return Flattr_Xml::toArray( $langXml );
+	}
+
+	/**
+	 * Returns info about the specified user.
+	 * If no user is given the currently authenticated user is used.
+	 * 
+	 * @param mixed $user string username | int userId | null 
+	 * @return array|false
+	 */
 	public function getUserInfo($user = null)
 	{
 		$result = null;
@@ -197,64 +177,161 @@ class Flattr_Rest
 		$dom = new DOMDocument();
 		$dom->loadXml($result);
 		$userXml = $dom->getElementsByTagName('user');
-		$userdata = array();
-		foreach ($userXml as $user)
+		if ( ( $userXml = $userXml->item(0) ) !== null )
 		{
-			foreach ($user->childNodes as $i)
-			{
-				$userdata[$i->nodeName] = $i->nodeValue;
-			}
+		    return Flattr_Xml::toArray( $userXml );
 		}
-		return $userdata;
-	}
 
-	private function loadArrayFromXml($node, $type = 'assoc')
+		return false;
+	}
+	
+	/**
+	 * Will register a new thing on flattr.com
+	 * 
+	 * @param string $url
+	 * @param string $title
+	 * @param string $category
+	 * @param string $description
+	 * @param string $tags
+	 * @param string $language
+	 * @param bool $hidden
+	 * @param bool $temporary
+	 */
+	public function submitThing($url, $title, $category, $description, $tags, $language, $hidden = false, $temporary = false)
 	{
-		$data = '';
-		if ( $type == 'assoc' )
+		$dom = new DOMDocument('1.0', 'utf-8');
+		
+		$node = $dom->appendChild( $dom->createElement('thing') );
+		Flattr_Xml::addElement($node, 'url', $url);
+		Flattr_Xml::addElement($node, 'title', $title);
+		Flattr_Xml::addElement($node, 'category', $category);
+		Flattr_Xml::addElement($node, 'description', $description);
+		Flattr_Xml::addElement($node, 'language', $language);
+		Flattr_Xml::addElement($node, 'hidden', $hidden);
+		Flattr_Xml::addElement($node, 'temporary', $temporary);
+		
+		$tagsNode = $node->appendChild( $dom->createElement('tags') );
+		foreach ( explode(',', $tags) as $tag )
 		{
-			$data = array();
+		    Flattr_Xml::addElement($tagsNode, 'tag', trim($tag));
 		}
+		
+		$result = $this->post($this->actionUrl('/thing/register'), array('data' => $dom->saveXml()));
+		
+		$dom = new DOMDocument();
+		$dom->loadXml($result);
+		$thingXml = $dom->getElementsByTagName('thing');
 
-		foreach ( $node->childNodes as $i )
-		{
-			if ( $type == 'assoc' )
-			{
-				$data[$i->nodeName] = trim($i->nodeValue);
-			}
-			else if ( $type == 'csv' )
-			{
-				$data .= (  $data != ''  ? ',' : '') .  $i->nodeValue;
-			}
-		}
-
-		return $data;
+		return Flattr_Xml::toArray( $thingXml->item(0) );
 	}
+	
+	// Oauth specific
+	
+	public function getAccessToken($verifier)
+	{
+		$parameters = array('oauth_verifier' => $verifier);
 
+		$request = $this->oAuthRequest($this->accessTokenUrl(), 'GET', $parameters);
+		$token = OAuthUtil::parse_parameters($request);
+		if ( isset($token['oauth_token']) && isset($token['oauth_token_secret']) )
+		{
+			$this->token = new OAuthConsumer($token['oauth_token'], $token['oauth_token_secret']);
+			return $token;
+		}
+	}
+	
 	public function getAuthorizeUrl($token, $access = 'read')
 	{
 		return $this->authorizeUrl() . '?oauth_token=' . $token['oauth_token'] . '&access_scope=' . $access;
 	}
-
+	
+	/**
+	 * @todo is this really usefull?
+	 * 
+	 * @param unknown_type $token
+	 * @param unknown_type $access
+	 */
 	public function getConnectUrl($token, $access = 'read')
 	{
 		return $this->connectUrl() . '?oauth_token=' . $token['oauth_token'] . '&access_scope=' . $access;
 	}
-
-	public function __construct($consumer_key, $consumer_secret, $oauth_token = null, $oauth_token_secret = null)
+	
+	/**
+	 * Gets a request token from the API server and returns an oauth token.
+	 *
+	 * @param string $callback a callback url (fully qualified)
+	 * @return array oauth response parameters as array
+	 */
+	public function getRequestToken($callback = null)
 	{
-		$this->signature_method = new OAuthSignatureMethod_HMAC_SHA1();
-		$this->consumer = new OAuthConsumer($consumer_key, $consumer_secret);
-		if ( !empty($oauth_token) && ! empty($oauth_token_secret) )
+		$parameters = array();
+
+		if ( !empty($callback) )
 		{
-			$this->token = new OAuthConsumer($oauth_token, $oauth_token_secret);
+			$parameters['oauth_callback'] = $callback;
+		}
+
+		$response = $this->oAuthRequest($this->requestTokenUrl(), 'GET', $parameters);
+		error_log($response);
+		$responseParameters = OAuthUtil::parse_parameters($response);
+		if ( isset($responseParameters['oauth_token']) && isset($responseParameters['oauth_token_secret']) )
+		{
+			$this->token = new OAuthConsumer($responseParameters['oauth_token'], $responseParameters['oauth_token_secret']);
 		}
 		else
 		{
-			$this->token = null;
+			$this->error = $responseParameters['oauth_problem'];
 		}
+
+		return $responseParameters;
+	}
+		
+	// INTERNAL
+	
+	private function accessTokenUrl()
+	{
+		return $this->baseUrl . '/oauth/access_token';
+	}
+	
+	private function actionUrl($uri)
+	{
+		return $this->baseUrl . '/rest/' . $this->apiVersion . $uri;
+	}
+		
+	private function authorizeUrl()
+	{
+		return $this->baseUrl . '/oauth/authenticate';
 	}
 
+	private function connectUrl()
+	{
+		return $this->baseUrl . '/oauth/connect';
+	}
+
+	private function get($url, $parameters = array())
+    {
+        $response = $this->oAuthRequest($url, 'GET', $parameters);
+        return $response;
+    }
+
+	private function requestTokenUrl()
+	{
+		return $this->baseUrl . '/oauth/request_token';
+	}
+	
+	private function getHeader($ch, $header)
+	{
+		$i = strpos($header, ':');
+		if (!empty($i))
+		{
+			$key = str_replace('-', '_', strtolower(substr($header, 0, $i)));
+  			$value = trim(substr($header, $i + 2));
+  			$this->http_header[$key] = $value;
+    	}
+    	
+    	return strlen($header);
+	}
+	
 	private function http($url, $method, $postfields = array(), $headers = array())
 	{
 		$this->http_info = array();
@@ -298,63 +375,7 @@ class Flattr_Rest
 
 		return $response;
 	}
-	
-	private function getHeader($ch, $header)
-	{
-		$i = strpos($header, ':');
-		if (!empty($i))
-		{
-			$key = str_replace('-', '_', strtolower(substr($header, 0, $i)));
-  			$value = trim(substr($header, $i + 2));
-  			$this->http_header[$key] = $value;
-    	}
-    	
-    	return strlen($header);
-	}
-	
-	public function getAccessToken($verifier)
-	{
-		$parameters = array('oauth_verifier' => $verifier);
 
-		$request = $this->oAuthRequest($this->accessTokenUrl(), 'GET', $parameters);
-		$token = OAuthUtil::parse_parameters($request);
-		if ( isset($token['oauth_token']) && isset($token['oauth_token_secret']) )
-		{
-			$this->token = new OAuthConsumer($token['oauth_token'], $token['oauth_token_secret']);
-			return $token;
-		}
-	}
-	
-	/**
-	 * Gets a request token from the API server and returns an oauth token.
-	 *
-	 * @param string $callback a callback url (fully qualified)
-	 * @return array oauth response parameters as array
-	 */
-	public function getRequestToken($callback = null)
-	{
-		$parameters = array();
-
-		if ( !empty($callback) )
-		{
-			$parameters['oauth_callback'] = $callback;
-		}
-
-		$response = $this->oAuthRequest($this->requestTokenUrl(), 'GET', $parameters);
-		error_log($response);
-		$responseParameters = OAuthUtil::parse_parameters($response);
-		if ( isset($responseParameters['oauth_token']) && isset($responseParameters['oauth_token_secret']) )
-		{
-			$this->token = new OAuthConsumer($responseParameters['oauth_token'], $responseParameters['oauth_token_secret']);
-		}
-		else
-		{
-			$this->error = $responseParameters['oauth_problem'];
-		}
-
-		return $responseParameters;
-	}
-	
 	private function oAuthRequest($url, $method, $parameters, $headers = array())
 	{
     	if (strrpos($url, 'https://') !== 0 && strrpos($url, 'http://') !== 0)
@@ -374,49 +395,11 @@ class Flattr_Rest
   				return $this->http($request->get_normalized_http_url(), $method, $request->to_postdata(), $headers);
     	}
   	}
-  	
-	public function submitThing($url, $title, $category, $description, $tags, $language, $hidden = false, $temporary = false)
-	{
-		$dom = new DOMDocument('1.0', 'utf-8');
-		
-		$doc = $dom->appendChild($dom->createElement('thing'));
-		$doc->appendChild(self::xmlAddElement($dom, 'url', $url));
-		$doc->appendChild($this->xmlAddElement($dom, 'title', $title));
-		$doc->appendChild($this->xmlAddElement($dom, 'category', $category));
-		$doc->appendChild($this->xmlAddCdataElement($dom, 'description', $description));
-		$doc->appendChild($this->xmlAddElement($dom, 'language', $language));
-		$doc->appendChild($this->xmlAddElement($dom, 'hidden', $hidden));
-		$doc->appendChild($this->xmlAddElement($dom, 'temporary', $temporary));
-		
-		$tagsXml = $doc->appendChild($dom->createElement('tags'));
 
-		foreach ( explode(',', $tags) as $tag )
-		{
-			$tagsXml->appendChild($this->xmlAddElement($dom, 'tag', trim($tag)));
-		}
-		
-		$result = $this->post($this->actionUrl('/thing/register'), array('data' => $dom->saveXml()));
-		$dom = new DOMDocument();
-		$dom->loadXml($result);
-		$thingXml = $dom->getElementsByTagName('thing');
-		$thing = $this->parseThingXml($thingXml->item(0));
-		
-		return $thing;
-	}
-	
-	private function xmlAddElement($dom, $name, $value)
-	{
-       $element = $dom->createElement($name);
-       $element->appendChild($dom->createTextNode($value));
-       
-       return $element;
-	}
-			
-    private function xmlAddCdataElement($dom, $name, $value)
+	private function post($url, $parameters = array())
     {
-        $element = $dom->createElement($name);
-        $cdata = $element->ownerDocument->createCDATASection($value);
-        $element->appendChild($cdata);
-        return $element;
-    }
+        $response = $this->oAuthRequest($url, 'POST', $parameters);
+        return $response;
+	}
+
 }

@@ -5,9 +5,6 @@ session_start();
 // Our configuration, edit it to set your API credentials
 require_once('config.php');
 
-// OAuth library
-require_once('oauth.php');
-
 // Flattr REST library
 require_once('flattr_rest.php');
 
@@ -41,4 +38,7 @@ saveToken($access_token['oauth_token'], $access_token['oauth_token_secret']);
 // Now it's time to make some REST calls
 
 ?>
-<a href="test.php">Run some REST calls</a> 
+		<a href="test.php">Run some REST calls</a> 
+
+	</body>
+</html>
