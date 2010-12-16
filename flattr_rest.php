@@ -131,6 +131,28 @@ class Flattr_Rest
 		return $things;
 	}
 
+	public function getSearchThingList($query)
+	{
+		$result = $this->get($this->actionUrl('/thing/search/q/' . urlencode($query)) );
+		if (empty($result))
+		{
+			return array();
+		}
+		$dom = new DOMDocument();
+		$dom->loadXml($result);
+		$thingXml = $dom->getElementsByTagName('thing');
+		$things = array();
+		foreach ($thingXml as $thing)
+		{
+			$thingdata = $this->parseThingXml($thing);
+			if ( is_array($thingdata) )
+			{
+				$things[] = $thingdata;
+			}
+		}
+		return $things;
+	}
+
 	public function getLanguages()
 	{
 		$result = $this->get($this->actionUrl('/feed/languages'));
