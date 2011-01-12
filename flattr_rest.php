@@ -56,6 +56,62 @@ class Flattr_Rest
         return $response;
 	}
 
+	public function browse($params)
+	{
+		$url = $this->actionUrl('/thing/browse');
+        if ( isset($params['query']) && $params['query'] != '' )
+        {   
+            $url .= '/query/' . $params['query'];
+        }   
+        if ( isset($params['tag']) && $params['tag'] != '' )
+        {   
+            if ( ! is_array($params['tag']) )
+            {   
+                $params['tag'] = array($params['tag']);
+            }   
+            $url .= '/tag/' . implode(',', $params['tag']);
+        }   
+        if ( isset($params['category']) && $params['category'] != '' )
+        {   
+            if ( ! is_array($params['category']) )
+            {   
+                $params['category'] = array($params['category']);
+            }   
+            $url .= '/category/' . implode(',', $params['category']);
+        }   
+        if ( isset($params['language']) && $params['language'] != '' )
+        {
+            if ( ! is_array($params['language']) )
+            {
+                $params['language'] = array($params['language']);
+            }
+            $url .= '/language/' . implode(',', $params['language']);
+        }
+        if ( isset($params['user']) && $params['user'] != '' )
+        {
+            if ( ! is_array($params['user']) )
+            {
+                $params['user'] = array($params['user']);
+            }
+            $url .= '/user/' . implode(',', $params['user']);
+        }
+
+        $result = $this->get($url);
+        $dom = new DOMDocument();
+        $dom->loadXml($result);
+        $thingXml = $dom->getElementsByTagName('thing');
+        $things = array();
+        foreach ($thingXml as $thing)
+        {
+            $thingdata = $this->parseThingXml($thing);
+            if ( is_array($thingdata) )
+            {
+                $things[] = $thingdata;
+            }
+        }
+        return $things;
+	}
+
 	private function parseThingXml($xml)
 	{
 		$thingdata = array();
@@ -360,16 +416,24 @@ class Flattr_Rest
 		}
 		else
 		{
-			$dom = new DOMDocument();
-			if ( $dom->loadXml($request) )
+			$params = $this->parseParams($request);
+			if ( isset($params['oauth_problem']) )
 			{
-				$error = $dom->getElementsByTagName('error');
-				if ( $error->length > 0 )
-				{
-					$this->error = $error->item(0)->nodeValue;
-				}
+				$this->error = $params['oauth_problem'];
 			}
 		}
+	}
+
+	private function parseParams($header)
+	{
+		$return = array();
+		$params = explode('&', $header);
+		foreach ( $params as $param )
+		{
+			list($key, $value) = explode('=', $param);
+			$return[$key] = $value;
+		}
+		return $return;
 	}
 	
 	private function oAuthRequest($url, $method, $parameters, $headers = array())
