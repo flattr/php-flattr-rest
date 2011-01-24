@@ -12,7 +12,7 @@ class Flattr_Rest
 
 	private $apiVersion = '0.0.1';
 	private $error;
-	private $baseUrl = 'http://api.flattr.com';
+	private $baseUrl = 'http://api.flattr.local';
 
 	public function error()
 	{
@@ -115,7 +115,6 @@ class Flattr_Rest
 	private function parseThingXml($xml)
 	{
 		$thingdata = array();
-
 		foreach ($xml->childNodes as $i)
 		{
 			if ( $i->nodeName == 'user' && $i->childNodes->length > 0 )
@@ -146,7 +145,24 @@ class Flattr_Rest
 			$dom = new DOMDocument();
 			$dom->loadXml($result);
 			$thingXml = $dom->getElementsByTagName('thing');
-			$thing = $this->parseThingXml($thingXml);
+			$thing = $this->parseThingXml($thingXml->item(0));
+			return $thing;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	public function getThingByUrl($url)
+	{
+		$result = $this->get($this->actionUrl('/thing/get/'), array('url' => urlencode($url)));
+		if ( $this->http_code == 200 )
+		{
+			$dom = new DOMDocument();
+			$dom->loadXml($result);
+			$thingXml = $dom->getElementsByTagName('thing');
+			$thing = $this->parseThingXml($thingXml->item(0));
 			return $thing;
 		}
 		else
@@ -266,6 +282,7 @@ class Flattr_Rest
 				$result = $this->get($this->actionUrl('/user/get/name/' . $user));
 			}
 		}
+
 
 		$dom = new DOMDocument();
 		$dom->loadXml($result);
