@@ -26,8 +26,7 @@ $_SESSION['flattr_request_token'] = $token;
 // Now, let's output an authentication url, param 1 is the request token and param 2 are the access scopes separated with ,
 // After auth we will be redirected to callback.php
 ?>
- 
-		<a href="<?php echo $flattr->getAuthorizeUrl($token, 'read,readextended,click,publish') ?>">Connect with Flattr</a>
+		<a href="<?php echo $flattr->getAuthorizeUrl($token, 'read,extendedread,click,publish') ?>">Connect with Flattr</a>
 
 	</body>
 </html>

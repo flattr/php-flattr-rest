@@ -13,7 +13,7 @@ class Flattr_Rest
 	public $consumer;
 	public $token;
 
-	private $apiVersion = '0.0.5';
+	private $apiVersion = '0.5';
 	private $error;
 	private $baseUrl = 'http://api.flattr.com';
 
@@ -82,11 +82,16 @@ class Flattr_Rest
 	{
 		$response = $this->get( $this->actionUrl( "/user/clicks/period/{$period}" ) );
 
-		$dom = new DOMDocument();
-		$dom->loadXml( $response );
-		$clicksXml = $dom->getElementsByTagName( 'click' );
-
-		return Flattr_Xml::toArray( $clicksXml );
+		if ( $this->http_code == 200 )
+		{
+			$dom = new DOMDocument();
+			$dom->loadXml( $response );
+			$clicksXml = $dom->getElementsByTagName( 'click' );
+	
+			return Flattr_Xml::toArray( $clicksXml );			
+		}
+		
+		return false;
 	}
 
 	/**
@@ -99,7 +104,7 @@ class Flattr_Rest
 	public function getThing( $id )
 	{
 		$result = $this->get($this->actionUrl('/thing/get/id/' . $id));
-		echo $result;
+
 		if ( $this->http_code == 200 )
 		{
 			$dom = new DOMDocument();
@@ -246,17 +251,6 @@ class Flattr_Rest
 	}
 	
 	/**
-	 * @todo is this really usefull?
-	 * 
-	 * @param unknown_type $token
-	 * @param unknown_type $access
-	 */
-	public function getConnectUrl($token, $access = 'read')
-	{
-		return $this->connectUrl() . '?oauth_token=' . $token['oauth_token'] . '&access_scope=' . $access;
-	}
-	
-	/**
 	 * Gets a request token from the API server and returns an oauth token.
 	 *
 	 * @param string $callback a callback url (fully qualified)
@@ -301,11 +295,6 @@ class Flattr_Rest
 	private function authorizeUrl()
 	{
 		return $this->baseUrl . '/oauth/authenticate';
-	}
-
-	private function connectUrl()
-	{
-		return $this->baseUrl . '/oauth/connect';
 	}
 
 	private function get($url, $parameters = array())

@@ -5,10 +5,10 @@ define( 'LOCAL_DEV_ENV', true );
 set_include_path(get_include_path() . PATH_SEPARATOR . '../lib/');
 
 // Your application key
-define('APP_KEY', 'P2aBZngZFQfz0tiywUWkF5u198BBu6T9YTAN7HDCoI2e2bCoVozqkUhkTJLdFvdt');
+define('APP_KEY', 'gsI6OcRKE5RqI9M9aZ7OZdpmeG1b0Bl6UT2zWJ9rFQHeQkdR9avZeKbih2k7uw4e');
 
 // Your application secret
-define('APP_SECRET', 'eE7bbBEp9wt2xWhibGzmqHw9g8dLtg5xK3zMu41urkmP7tX80nkhUGg0EkCYrxl1');
+define('APP_SECRET', 'gWE2wDj2kR601aH0b3PfERnMKyJ4UE90rDSN72GhJD8BDGsFz8K3PYFpmfk7JkX1');
 
 // Your callback url
 define('CALLBACK_URL', 'http://'.$_SERVER['SERVER_NAME'].dirname($_SERVER['SCRIPT_NAME']).'/callback.php');
