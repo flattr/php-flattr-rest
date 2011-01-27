@@ -399,7 +399,7 @@ class Flattr_Rest
 		
 	private function authorizeUrl()
 	{
-		return $this->baseUrl . '/oauth/authenticate';
+		return $this->baseUrl . '/oauth/authorize';
 	}
 
 	private function get($url, $parameters = array())
