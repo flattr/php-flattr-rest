@@ -371,7 +371,6 @@ class Flattr_Rest
 		}
 
 		$response = $this->oAuthRequest($this->requestTokenUrl(), 'GET', $parameters);
-		error_log($response);
 		$responseParameters = OAuthUtil::parse_parameters($response);
 		if ( isset($responseParameters['oauth_token']) && isset($responseParameters['oauth_token_secret']) )
 		{
