@@ -38,6 +38,62 @@ class Flattr_Rest
 
 	// Flattr API methods
 
+	public function browse($params)
+	{
+		$url = $this->actionUrl('/thing/browse');
+		if ( isset($params['query']) && $params['query'] != '' )
+		{
+			$url .= '/query/' . $params['query'];
+		}
+		if ( isset($params['tag']) && $params['tag'] != '' )
+		{
+			if ( ! is_array($params['tag']) )
+			{
+				$params['tag'] = array($params['tag']);
+			}
+			$url .= '/tag/' . implode(',', $params['tag']);
+		}
+		if ( isset($params['category']) && $params['category'] != '' )
+		{
+			if ( ! is_array($params['category']) )
+			{
+				$params['category'] = array($params['category']);
+			}
+			$url .= '/category/' . implode(',', $params['category']);
+		}
+		if ( isset($params['language']) && $params['language'] != '' )
+		{
+			if ( ! is_array($params['language']) )
+			{
+				$params['language'] = array($params['language']);
+			}
+			$url .= '/language/' . implode(',', $params['language']);
+		}
+		if ( isset($params['user']) && $params['user'] != '' )
+		{
+			if ( ! is_array($params['user']) )
+			{
+				$params['user'] = array($params['user']);
+			}
+			$url .= '/user/' . implode(',', $params['user']);
+		}
+
+		$result = $this->get($url);
+		$dom = new DOMDocument();
+		$dom->loadXml($result);
+		$thingXml = $dom->getElementsByTagName('thing');
+		$things = array();
+		foreach ($thingXml as $thing)
+		{
+			$thingdata = Flattr_Xml::toArray($thing);
+			if ( is_array($thingdata) )
+			{
+				$things[] = $thingdata;
+			}
+		}
+		return $things;
+	}
+
 	public function clickThing($id)
 	{
 		$result = $this->get($this->actionUrl('/thing/click/id/' . $id));
@@ -117,6 +173,55 @@ class Flattr_Rest
 		}
 
 		return false;
+	}
+
+	public function getThingByUrl($url)
+	{
+		$result = $this->get($this->actionUrl('/thing/get/'), array('url' => urlencode($url)));
+		if ( $this->http_code == 200 )
+		{
+			$dom = new DOMDocument();
+			$dom->loadXml($result);
+			$thingXml = $dom->getElementsByTagName('thing');
+			$thing = Flattr_Xml::toArray($thingXml->item(0));
+			return $thing;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	public function getThingClicks($thingId)
+	{
+		$result = $this->get($this->actionUrl('/thing/clicks/'), array('thing' => $thingId));
+		$return = array();
+		if ( $this->http_code == 200 )
+		{   
+			$dom = new DOMDocument();
+			$dom->loadXml($result);
+
+			$clicks = $dom->getElementsByTagName('clicks')->item(0);
+			$anon = $clicks->getElementsByTagName('anonymous')->item(0);
+			$anonymousClicks = $anon->getElementsByTagName('count')->item(0)->nodeValue;
+
+			$public = $clicks->getElementsByTagName('public')->item(0);
+			$publicClicks = $public->getElementsByTagName('count')->item(0)->nodeValue;
+
+			$userArray = array();
+			$publicUsers = $public->getElementsByTagName('users')->item(0);
+			$nodes = $publicUsers->getElementsByTagName('user');
+			for ($i=0; $i<$nodes->length; $i++)
+			{
+				$userArray[] = Flattr_Xml::toArray($nodes->item($i));
+			}
+
+			return array('public' => $publicClicks, 'anonymous' => $anonymousClicks, 'publicUsers' => $userArray);
+		}
+		else
+		{
+			return false;
+		}
 	}
 
 	/**
