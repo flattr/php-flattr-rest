@@ -4,6 +4,8 @@ php-flattr-rest makes it easier to use the Flattr.com REST API.
 It depends on the PHP DOM extension which is normally enabled by default.
 If it's disabled, enable it using --enable-dom.
 
+Note: don't use master, use one of the branches instead.
+
 Support
 
 Direct support: flattr.com/support/contact 
