@@ -121,7 +121,7 @@ class Flattr_Rest
 	public function getCategories()
 	{
 		$result = $this->get($this->actionUrl('/feed/categories'));
-		
+
 		$dom = new DOMDocument();
 		$dom->loadXml($result);
 		$catXml = $dom->getElementsByTagName('category');
@@ -150,6 +150,22 @@ class Flattr_Rest
 		return false;
 	}
 
+	public function getSubscriptions()
+	{
+		$response = $this->get( $this->actionUrl( "/subscription/list" ) );
+		
+		if ( $this->http_code == 200 )
+		{
+			$dom = new DOMDocument();
+			$dom->loadXml( $response );
+			$subsXml = $dom->getElementsByTagName( 'subscription' );
+	
+			return Flattr_Xml::toArray( $subsXml );
+		}
+		
+		return false;
+	}
+	
 	/**
 	 * Returns a thing as an array.
 	 * If a thing could not be found false is returned
