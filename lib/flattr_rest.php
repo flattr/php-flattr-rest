@@ -350,9 +350,9 @@ class Flattr_Rest
 
 		return Flattr_Xml::toArray( $thingXml->item(0) );
 	}
-	
+
 	// Oauth specific
-	
+
 	public function getAccessToken($verifier)
 	{
 		$parameters = array('oauth_verifier' => $verifier);
@@ -365,12 +365,12 @@ class Flattr_Rest
 			return $token;
 		}
 	}
-	
+
 	public function getAuthorizeUrl($token, $access = 'read')
 	{
 		return $this->authorizeUrl() . '?oauth_token=' . $token['oauth_token'] . '&access_scope=' . $access;
 	}
-	
+
 	/**
 	 * Gets a request token from the API server and returns an oauth token.
 	 *
@@ -399,9 +399,9 @@ class Flattr_Rest
 
 		return $responseParameters;
 	}
-		
+
 	// INTERNAL
-	
+
 	private function accessTokenUrl()
 	{
 		return $this->baseUrl . '/oauth/access_token';
