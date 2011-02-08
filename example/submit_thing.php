@@ -20,5 +20,7 @@ list($token, $token_secret) = loadToken();
 
 // Setup a new client
 $flattr = new Flattr_Rest(APP_KEY, APP_SECRET, $token, $token_secret);
-extract($_POST);
-$flattr->submitThing($url, $title, $category, $description, $tags, $language);
+
+// Submit with the user form input
+$flattr->submitThing($_POST['url'], $_POST['title'], $_POST['category'],
+    $_POST['description'], $_POST['tags'], $_POST['language']);
