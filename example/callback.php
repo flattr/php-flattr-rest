@@ -32,6 +32,7 @@ if ( $flattr->error() )
     die( 'Error ' . $flattr->error() );
 }
 
+echo "saveToken(".var_export($access_token,true).");<br/>\n";
 // Save the access token, it will be valid until the user revokes it.
 saveToken($access_token['oauth_token'], $access_token['oauth_token_secret']);
 
@@ -39,6 +40,4 @@ saveToken($access_token['oauth_token'], $access_token['oauth_token_secret']);
 
 ?>
 		<a href="test.php">Run some REST calls</a> 
-
-	</body>
-</html>
+<?php require_once('footer.php'); ?>

@@ -87,6 +87,4 @@ $languages = $flattr->getLanguages();
         	</div>
         	<input type="submit">
         </form>
-
-	</body>
-</html>
+<?php require_once('footer.php')?>

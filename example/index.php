@@ -1,6 +1,13 @@
 <?php
 
 session_start();
+if (!empty($_GET['logout']))
+{
+  $_SESSION = array();
+  session_Destroy();
+  header('Location: /');
+  die();
+}
 
 // Our configuration, edit it to set your API credentials
 require_once('config.php');
@@ -17,7 +24,7 @@ $token = $flattr->getRequestToken(CALLBACK_URL);
 // Did we succeed?
 if ( $flattr->error() )
 {
-    die( 'Error ' . $flattr->error() );
+    die( 'Error, no request token ' . $flattr->error() );
 }
 
 // Save the token in session for later use
@@ -27,6 +34,4 @@ $_SESSION['flattr_request_token'] = $token;
 // After auth we will be redirected to callback.php
 ?>
 		<a href="<?php echo $flattr->getAuthorizeUrl($token, 'read,extendedread,click,publish') ?>">Connect with Flattr</a>
-
-	</body>
-</html>
+<?php require_once('footer.php') ?>
